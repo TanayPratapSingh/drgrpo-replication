@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 import warnings
@@ -34,7 +36,7 @@ import mlx.nn as nn
 import mlx.optimizers as optim
 import numpy as np
 from datasets import Dataset
-from mlx.utils import tree_flatten, tree_map
+from mlx.utils import tree_flatten, tree_map, tree_unflatten
 from mlx_lm import load
 from mlx_lm.tuner.utils import linear_to_lora_layers
 
@@ -43,6 +45,7 @@ from rollout import r1_prompt, sample
 from vendor.math_grader import answer_tag_reward_fn
 
 ROOT = Path(__file__).resolve().parent.parent
+PAUSE_FILE = ROOT / "PAUSE"  # touch this (./pause.sh) to stop cleanly after the current step
 LORA_KEYS = ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
              "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj"]
 
@@ -95,6 +98,38 @@ def evaluate(model, tok, problems, answers, max_tokens, gen_batch):
     }, outs
 
 
+def save_checkpoint(root: Path, step: int, model, optimizer) -> None:
+    """Write adapter, optimizer state and step into a temp folder, then rename.
+
+    The rename is atomic, so a checkpoint directory either exists whole or not
+    at all: a kill mid write can never leave a half written checkpoint behind.
+    """
+    root.mkdir(exist_ok=True)
+    final, tmp = root / f"step_{step:04d}", root / f"step_{step:04d}.tmp"
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    tmp.mkdir()
+    mx.save_safetensors(str(tmp / "adapter.safetensors"),
+                        dict(tree_flatten(model.trainable_parameters())))
+    mx.save_safetensors(str(tmp / "optimizer.safetensors"), dict(tree_flatten(optimizer.state)))
+    (tmp / "state.json").write_text(json.dumps(
+        {"step": step, "saved": datetime.now(timezone.utc).isoformat()}))
+    if final.exists():
+        shutil.rmtree(final)
+    os.rename(tmp, final)
+    for old in root.glob("step_*"):
+        if old != final:
+            shutil.rmtree(old)
+
+
+def latest_checkpoint(root: Path):
+    if not root.exists():
+        return None
+    done = sorted(d for d in root.glob("step_*")
+                  if d.is_dir() and not d.name.endswith(".tmp") and (d / "state.json").exists())
+    return done[-1] if done else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--loss", choices=list(VARIANTS), required=True)
@@ -113,18 +148,13 @@ def main():
     ap.add_argument("--eval-n", type=int, default=100, help="MATH500 problems per interim eval")
     ap.add_argument("--final-eval-n", type=int, default=500)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--resume", action="store_true", help="continue from the latest checkpoint")
+    ap.add_argument("--ckpt-every", type=int, default=5)
     args = ap.parse_args()
 
     variant = VARIANTS[args.loss]
     out = ROOT / "runs" / (args.out or f"{args.loss}_s{args.seed}")
     out.mkdir(parents=True, exist_ok=True)
-    # A restarted run must not interleave its steps with a crashed run's lines.
-    for stale in ("log.jsonl", "eval.jsonl", "rollouts.jsonl"):
-        (out / stale).write_text("")
-    (out / "config.json").write_text(json.dumps({
-        **vars(args), "variant": variant.__dict__,
-        "started": datetime.now(timezone.utc).isoformat(),
-    }, indent=2))
 
     # MLX keeps freed buffers in a cache that get_peak_memory does not report. On
     # a 16 GB machine that cache pushed the first pilot into swap until the Metal
@@ -166,7 +196,36 @@ def main():
               f"incorrect {res['len_incorrect']})", flush=True)
         return outs
 
-    run_eval(0, args.eval_n)
+    ckpt_root = out / "ckpt"
+    start_step = 1
+    resume_from = latest_checkpoint(ckpt_root) if args.resume else None
+    if resume_from is not None:
+        st = json.loads((resume_from / "state.json").read_text())
+        model.load_weights(str(resume_from / "adapter.safetensors"), strict=False)
+        optimizer.state = tree_unflatten(
+            list(mx.load(str(resume_from / "optimizer.safetensors")).items()))
+        start_step = st["step"] + 1
+        # drop anything logged after the checkpoint so the files read as one clean run
+        for name in ("log.jsonl", "rollouts.jsonl", "eval.jsonl"):
+            f = out / name
+            if f.exists():
+                kept = [l for l in f.read_text().splitlines()
+                        if l.strip() and json.loads(l)["step"] <= st["step"]]
+                f.write_text("".join(l + "\n" for l in kept))
+        cfg = json.loads((out / "config.json").read_text())
+        cfg.setdefault("resumed", []).append(
+            {"from_step": st["step"], "at": datetime.now(timezone.utc).isoformat()})
+        (out / "config.json").write_text(json.dumps(cfg, indent=2))
+        print(f"[{args.loss} s{args.seed}] resumed from checkpoint at step {st['step']}", flush=True)
+    else:
+        # a fresh run must not interleave its steps with a crashed run's lines
+        for stale in ("log.jsonl", "eval.jsonl", "rollouts.jsonl"):
+            (out / stale).write_text("")
+        (out / "config.json").write_text(json.dumps({
+            **vars(args), "variant": variant.__dict__,
+            "started": datetime.now(timezone.utc).isoformat(),
+        }, indent=2))
+        run_eval(0, args.eval_n)
 
     def loss_fn(model, full_ids, prompt_len, adv, n_total):
         lp = response_logps(model, full_ids, prompt_len)[None]
@@ -189,9 +248,9 @@ def main():
             return plain_call(self, *a, **k)
         return mx.checkpoint(inner)(self.trainable_parameters(), *a, **k)
 
-    cursor = 0
+    cursor = (start_step - 1) * args.prompts
 
-    for step in range(1, args.steps + 1):
+    for step in range(start_step, args.steps + 1):
         qs = [train[int(order[(cursor + k) % len(order)])] for k in range(args.prompts)]
         cursor += args.prompts
         prompt_ids = [tok.encode(r1_prompt(q["problem"])) for q in qs]
@@ -269,6 +328,13 @@ def main():
             run_eval(step, args.eval_n)
             mx.save_safetensors(str(out / "adapter.safetensors"),
                                 dict(tree_flatten(model.trainable_parameters())))
+
+        pause = PAUSE_FILE.exists() and step != args.steps
+        if pause or step % args.ckpt_every == 0:
+            save_checkpoint(ckpt_root, step, model, optimizer)
+        if pause:
+            print(f"[{args.loss} s{args.seed}] paused after step {step}; checkpoint saved", flush=True)
+            return
 
     outs = run_eval(args.steps, args.final_eval_n)
     mx.save_safetensors(str(out / "adapter.safetensors"),
