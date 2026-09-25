@@ -15,7 +15,7 @@ from train_torch import merged_linear_weights
 def test_merged_weights_reproduce_lora_outputs():
     lora = build().eval()                       # LoRA with non zero B
     plain = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=torch.float32).eval()
-    weights = merged_linear_weights(lora, torch.float32, torch.device("cpu"))
+    weights = list(merged_linear_weights(lora, torch.float32, torch.device("cpu")))
     assert len(weights) == 7 * plain.config.num_hidden_layers
     sd = plain.state_dict()
     for name, w in weights:

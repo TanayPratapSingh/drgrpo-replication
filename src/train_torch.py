@@ -74,16 +74,17 @@ def merged_linear_weights(learner, dtype, device):
 
     Returned under the base checkpoint names (model.layers.N.self_attn.q_proj.weight),
     which is what vLLM's load_weights expects; it restacks q/k/v and gate/up itself.
+
+    Yields one tensor at a time: materialising all 196 merged weights (~2.6 GB) on the
+    sampler GPU at once, on top of vLLM's reservation, ran a T4 out of memory.
     """
-    out = []
     with torch.no_grad():
         for name, mod in learner.named_modules():
             if hasattr(mod, "base_layer") and hasattr(mod, "lora_A") and "default" in mod.lora_A:
                 delta = (mod.lora_B["default"].weight.float() @ mod.lora_A["default"].weight.float()) \
                     * mod.scaling["default"]
                 merged = (mod.base_layer.weight.float() + delta).to(dtype)
-                out.append((name.replace("base_model.model.", "", 1) + ".weight", merged.to(device)))
-    return out
+                yield name.replace("base_model.model.", "", 1) + ".weight", merged.to(device)
 
 
 class VLLMSampler:
@@ -278,7 +279,7 @@ def main():
     ap.add_argument("--final-eval-n", type=int, default=500)
     ap.add_argument("--ckpt-every", type=int, default=10)
     ap.add_argument("--sampler", choices=["auto", "vllm", "hf"], default="auto")
-    ap.add_argument("--vllm-mem", type=float, default=0.85)
+    ap.add_argument("--vllm-mem", type=float, default=0.75)
     ap.add_argument("--gen-batch", type=int, default=64, help="HF sampler batch size")
     ap.add_argument("--micro-tokens", type=int, default=4096, help="padded tokens per backward micro batch")
     ap.add_argument("--data-dir", default=str(ROOT / "data"))
