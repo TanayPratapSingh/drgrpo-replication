@@ -332,7 +332,8 @@ def main():
                                 dict(tree_flatten(model.trainable_parameters())))
 
         pause = PAUSE_FILE.exists() and step != args.steps
-        checkpoint_due = step % args.ckpt_every == 0
+        # counted from where this process started, so a new gap applies from the resume point
+        checkpoint_due = (step - start_step + 1) % args.ckpt_every == 0
         if pause or checkpoint_due:
             save_checkpoint(ckpt_root, step, model, optimizer)
         if args.pause_each_ckpt and checkpoint_due and step != args.steps:
