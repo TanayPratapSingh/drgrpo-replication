@@ -13,3 +13,4 @@ runs/*/adapter.safetensors
 .tvenv/
 kaggle/build/
 kaggle/output/
+kaggle/output_seed0/
