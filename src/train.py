@@ -77,10 +77,10 @@ def response_logps(model, full_ids: list[int], prompt_len: int) -> mx.array:
     return picked - lse
 
 
-def evaluate(model, tok, problems, answers, max_tokens):
+def evaluate(model, tok, problems, answers, max_tokens, gen_batch):
     prompts = [tok.encode(r1_prompt(p)) for p in problems]
     outs = sample(model, tok, prompts, max_tokens=max_tokens, temperature=0.0,
-                  completion_batch_size=128)
+                  completion_batch_size=gen_batch)
     rewards, formatted = grade([o.text for o in outs], answers)
     lens = np.array([len(o.tokens) for o in outs])
     correct = rewards > 0
@@ -108,6 +108,7 @@ def main():
     ap.add_argument("--lora-rank", type=int, default=64)
     ap.add_argument("--lora-scale", type=float, default=1.0)
     ap.add_argument("--clip-grad", type=float, default=1.0)
+    ap.add_argument("--gen-batch", type=int, default=64, help="concurrent sequences while sampling")
     ap.add_argument("--eval-every", type=int, default=25)
     ap.add_argument("--eval-n", type=int, default=100, help="MATH500 problems per interim eval")
     ap.add_argument("--final-eval-n", type=int, default=500)
@@ -121,6 +122,12 @@ def main():
         **vars(args), "variant": variant.__dict__,
         "started": datetime.now(timezone.utc).isoformat(),
     }, indent=2))
+
+    # MLX keeps freed buffers in a cache that get_peak_memory does not report. On
+    # a 16 GB machine that cache pushed the first pilot into swap until the Metal
+    # watchdog killed a command buffer mid rollout, so cap it and clear it
+    # between the rollout and training phases.
+    mx.set_cache_limit(1 * 2**30)
 
     model, tok = load(args.model)
     model.freeze()
@@ -141,7 +148,8 @@ def main():
     def run_eval(step, n):
         idx = eval_idx[:n]
         res, outs = evaluate(model, tok, [evald[int(i)]["problem"] for i in idx],
-                             [evald[int(i)]["answer"] for i in idx], args.max_tokens)
+                             [evald[int(i)]["answer"] for i in idx], args.max_tokens,
+                             args.gen_batch)
         res["step"] = step
         with open(out / "eval.jsonl", "a") as f:
             f.write(json.dumps(res) + "\n")
@@ -186,8 +194,9 @@ def main():
         mx.random.seed(args.seed * 1_000_003 + step)
         t0 = time.time()
         rolls = sample(model, tok, expanded, max_tokens=args.max_tokens, temperature=1.0,
-                       completion_batch_size=128)
+                       completion_batch_size=args.gen_batch)
         t_roll = time.time() - t0
+        mx.clear_cache()
 
         rewards, formatted = grade([r.text for r in rolls], answers)
         adv = group_advantages(rewards, args.group, variant.std_norm)
@@ -213,6 +222,7 @@ def main():
             optimizer.update(model, acc)
             mx.eval(model.parameters(), optimizer.state)
         t_train = time.time() - t1
+        mx.clear_cache()
 
         correct = rewards > 0
         groups = rewards.reshape(-1, args.group).sum(1)
