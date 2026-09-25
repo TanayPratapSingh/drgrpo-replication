@@ -9,3 +9,5 @@ PAUSE
 # 282 MB adapters and 845 MB checkpoints stay local
 runs/*/ckpt/
 runs/*/adapter.safetensors
+.kvenv/
+.tvenv/
