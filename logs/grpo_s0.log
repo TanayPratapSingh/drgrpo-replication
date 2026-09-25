@@ -1,0 +1,42 @@
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 3093.14it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] eval step 0 n=100: acc 0.020 len 333 (correct 89.0, incorrect 338.1326530612245)
+[grpo s0] step   1 reward 0.016 fmt 0.18 len 254 (c 84.5 / i 256.6111111111111) sig 2/16 gn 0.061 roll 90s train 9s peak 8.3GB
+[grpo s0] step   2 reward 0.016 fmt 0.22 len 283 (c 90.0 / i 286.1904761904762) sig 2/16 gn 0.063 roll 91s train 11s peak 7.79GB
+[grpo s0] step   3 reward 0.008 fmt 0.17 len 256 (c 88.0 / i 257.6377952755906) sig 1/16 gn 0.052 roll 106s train 7s peak 11.05GB
+[grpo s0] step   4 reward 0.047 fmt 0.20 len 240 (c 147.33333333333334 / i 244.78688524590163) sig 4/16 gn 0.082 roll 90s train 27s peak 7.87GB
+[grpo s0] step   5 reward 0.031 fmt 0.34 len 302 (c 110.0 / i 308.69354838709677) sig 3/16 gn 0.062 roll 100s train 16s peak 7.96GB
+[grpo s0] paused after step 5; checkpoint saved
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 2491.74it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] resumed from checkpoint at step 5
+[grpo s0] step   6 reward 0.047 fmt 0.46 len 245 (c 114.16666666666667 / i 251.58196721311475) sig 3/16 gn 0.070 roll 72s train 10s peak 6.92GB
+[grpo s0] step   7 reward 0.141 fmt 0.55 len 284 (c 147.55555555555554 / i 305.76363636363635) sig 8/16 gn 0.126 roll 102s train 68s peak 8.72GB
+[grpo s0] step   8 reward 0.188 fmt 0.77 len 192 (c 152.0 / i 201.15384615384616) sig 9/16 gn 0.110 roll 78s train 45s peak 6.69GB
+[grpo s0] step   9 reward 0.141 fmt 0.80 len 220 (c 228.77777777777777 / i 218.34545454545454) sig 8/16 gn 0.115 roll 90s train 55s peak 7.41GB
+[grpo s0] step  10 reward 0.352 fmt 0.93 len 184 (c 145.04444444444445 / i 205.53012048192772) sig 12/16 gn 0.233 roll 80s train 67s peak 8.91GB
+[grpo s0] paused after step 10; checkpoint saved
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 2412.90it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] resumed from checkpoint at step 10
+[grpo s0] step  11 reward 0.188 fmt 0.95 len 206 (c 151.08333333333334 / i 219.0) sig 10/16 gn 0.102 roll 59s train 55s peak 5.85GB
+[grpo s0] step  12 reward 0.188 fmt 0.95 len 195 (c 144.375 / i 206.68269230769232) sig 8/16 gn 0.116 roll 77s train 44s peak 6.48GB
+[grpo s0] step  13 reward 0.297 fmt 0.95 len 268 (c 172.3684210526316 / i 308.7) sig 10/16 gn 0.102 roll 94s train 73s peak 7.61GB
+[grpo s0] step  14 reward 0.258 fmt 0.95 len 234 (c 135.66666666666666 / i 267.61052631578946) sig 8/16 gn 0.115 roll 83s train 53s peak 6.85GB
+[grpo s0] step  15 reward 0.250 fmt 0.91 len 281 (c 200.9375 / i 308.3229166666667) sig 11/16 gn 0.089 roll 94s train 92s peak 6.88GB
+[grpo s0] paused after step 15; checkpoint saved
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 2534.32it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] resumed from checkpoint at step 15
+[grpo s0] step  16 reward 0.281 fmt 0.91 len 266 (c 159.58333333333334 / i 307.2826086956522) sig 9/16 gn 0.109 roll 74s train 45s peak 7.66GB
+[grpo s0] step  17 reward 0.234 fmt 0.88 len 285 (c 153.43333333333334 / i 324.98979591836735) sig 8/16 gn 0.118 roll 92s train 44s peak 7.03GB
+[grpo s0] step  18 reward 0.352 fmt 0.90 len 306 (c 189.8 / i 369.51807228915663) sig 11/16 gn 0.088 roll 108s train 86s peak 7.81GB
+[grpo s0] step  19 reward 0.336 fmt 0.97 len 279 (c 154.90697674418604 / i 342.45882352941175) sig 7/16 gn 0.133 roll 101s train 51s peak 7.03GB
+[grpo s0] step  20 reward 0.289 fmt 0.89 len 329 (c 166.2972972972973 / i 394.9230769230769) sig 8/16 gn 0.163 roll 99s train 64s peak 7.19GB
+[grpo s0] step  21 reward 0.258 fmt 0.84 len 387 (c 207.87878787878788 / i 449.09473684210525) sig 9/16 gn 0.080 roll 100s train 79s peak 7.04GB
+[grpo s0] step  22 reward 0.227 fmt 0.88 len 344 (c 242.72413793103448 / i 373.67676767676767) sig 8/16 gn 0.087 roll 118s train 81s peak 11.55GB
+[grpo s0] step  23 reward 0.297 fmt 0.91 len 275 (c 191.68421052631578 / i 310.6333333333333) sig 12/16 gn 0.153 roll 92s train 93s peak 9.07GB
+[grpo s0] step  24 reward 0.211 fmt 0.80 len 428 (c 318.55555555555554 / i 457.34653465346537) sig 12/16 gn 0.085 roll 112s train 129s peak 7.6GB
+[grpo s0] step  25 reward 0.273 fmt 0.91 len 360 (c 232.14285714285714 / i 408.741935483871) sig 10/16 gn 0.130 roll 95s train 74s peak 6.98GB
+[grpo s0] eval step 25 n=100: acc 0.380 len 339 (correct 214.39473684210526, incorrect 414.9516129032258)
+[grpo s0] paused after step 25; checkpoint saved

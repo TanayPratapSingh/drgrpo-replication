@@ -1,0 +1,14 @@
+2026-09-24T23:14:46Z start grpo_s0
+2026-09-24T23:38:22Z start grpo_s0
+2026-09-24T23:47:27Z watcher: PAUSE raised after step 4
+2026-09-24T23:49:20Z end grpo_s0 exit=0
+2026-09-24T23:49:20Z paused after grpo_s0
+2026-09-24T23:50:30Z start grpo_s0
+2026-09-25T00:01:42Z end grpo_s0 exit=0
+2026-09-25T00:01:42Z paused after grpo_s0
+2026-09-25T00:02:24Z start grpo_s0
+2026-09-25T00:14:33Z end grpo_s0 exit=0
+2026-09-25T00:14:33Z paused after grpo_s0
+2026-09-25T00:16:23Z start grpo_s0
+2026-09-25T00:47:17Z end grpo_s0 exit=0
+2026-09-25T00:47:17Z paused after grpo_s0

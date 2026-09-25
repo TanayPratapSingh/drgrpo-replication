@@ -1,0 +1,2 @@
+{"n": 100, "accuracy": 0.02, "format_rate": 0.15, "len_mean": 333.15, "len_correct": 89.0, "len_incorrect": 338.1326530612245, "truncated": 10, "step": 0}
+{"n": 100, "accuracy": 0.38, "format_rate": 0.91, "len_mean": 338.74, "len_correct": 214.39473684210526, "len_incorrect": 414.9516129032258, "truncated": 6, "step": 25}
