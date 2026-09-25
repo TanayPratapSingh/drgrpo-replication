@@ -55,6 +55,7 @@ class Rollout:
     tokens: list[int]
     text: str
     finish: str  # "answer", "eos" or "length"
+    sampler_logps: list[float] | None = None  # the sampler's own log prob of each sampled token
 
 
 def grade(texts, answers):
@@ -68,38 +69,76 @@ def grade(texts, answers):
 
 # --------------------------------------------------------------------------- samplers
 
+def merged_linear_weights(learner, dtype, device):
+    """HF named weights with each LoRA delta folded in: W + scaling * B @ A.
+
+    Returned under the base checkpoint names (model.layers.N.self_attn.q_proj.weight),
+    which is what vLLM's load_weights expects; it restacks q/k/v and gate/up itself.
+    """
+    out = []
+    with torch.no_grad():
+        for name, mod in learner.named_modules():
+            if hasattr(mod, "base_layer") and hasattr(mod, "lora_A") and "default" in mod.lora_A:
+                delta = (mod.lora_B["default"].weight.float() @ mod.lora_A["default"].weight.float()) \
+                    * mod.scaling["default"]
+                merged = (mod.base_layer.weight.float() + delta).to(dtype)
+                out.append((name.replace("base_model.model.", "", 1) + ".weight", merged.to(device)))
+    return out
+
+
 class VLLMSampler:
-    """vLLM with the current LoRA adapter loaded from disk before every call."""
+    """vLLM holding plain merged weights, updated in place after every optimizer step.
+
+    Serving the policy as a LoRA adapter ran at ~380 tok/s on a T4, where vLLM's LoRA
+    kernels fall back to slow paths. Folding the adapter into the base weights and
+    loading those in place avoids LoRA at inference entirely.
+    """
 
     def __init__(self, args, work: Path, dtype: str):
+        os.environ.setdefault("VLLM_ENABLE_V1_MULTIPROCESSING", "0")  # engine in process, so its model is reachable
         from vllm import LLM
-        self.args, self.dir, self.version = args, work / "adapter_for_sampler", 0
-        self.llm = LLM(model=args.model, dtype=dtype, enable_lora=True,
-                       max_lora_rank=args.lora_rank, max_loras=1, seed=args.seed,
+        self.args, self.name = args, "vllm"
+        self.dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
+        self.llm = LLM(model=args.model, dtype=dtype, seed=args.seed,
                        gpu_memory_utilization=args.vllm_mem,
                        max_model_len=args.max_prompt + args.max_tokens,
                        enable_prefix_caching=True)
-        self.name = "vllm"
+        self.model = self._find_model()
+        self.device = next(self.model.parameters()).device
+
+    def _find_model(self):
+        paths = ["model_executor.driver_worker.worker.model_runner.model",
+                 "model_executor.driver_worker.model_runner.model",
+                 "engine_core.engine_core.model_executor.driver_worker.worker.model_runner.model"]
+        for path in paths:
+            obj = self.llm.llm_engine
+            try:
+                for attr in path.split("."):
+                    obj = getattr(obj, attr)
+                return obj
+            except AttributeError:
+                continue
+        raise RuntimeError("cannot reach the vLLM model for in place weight sync")
 
     def sync(self, learner):
-        self.version += 1
-        learner.save_pretrained(str(self.dir))
-        from vllm.lora.request import LoRARequest
-        self.lora = LoRARequest(f"policy_v{self.version}", self.version, str(self.dir))
+        self.model.load_weights(merged_linear_weights(learner, self.dtype, self.device))
+        self.llm.reset_prefix_cache()      # cached prompt KV was computed with the old weights
 
     def generate(self, prompt_ids, n, temperature, seed):
         from vllm import SamplingParams
         sp = SamplingParams(n=n, temperature=temperature, top_p=1.0, max_tokens=self.args.max_tokens,
-                            stop=[STOP_STR], include_stop_str_in_output=True,
+                            stop=[STOP_STR], include_stop_str_in_output=True, logprobs=0,
                             seed=seed if temperature > 0 else None)
-        outs = self.llm.generate([{"prompt_token_ids": p} for p in prompt_ids], sp,
-                                 lora_request=self.lora, use_tqdm=False)
+        outs = self.llm.generate([{"prompt_token_ids": p} for p in prompt_ids], sp, use_tqdm=False)
         rolls = []
         for o in outs:
             for c in o.outputs:
                 finish = ("length" if c.finish_reason == "length"
                           else "answer" if c.stop_reason == STOP_STR else "eos")
-                rolls.append(Rollout(list(c.token_ids), c.text, finish))
+                lps = None
+                if c.logprobs:
+                    lps = [float(d[t].logprob) for d, t in zip(c.logprobs, c.token_ids)]
+                rolls.append(Rollout(list(c.token_ids), c.text, finish, lps))
         return rolls
 
 
@@ -237,7 +276,7 @@ def main():
     ap.add_argument("--sampler", choices=["auto", "vllm", "hf"], default="auto")
     ap.add_argument("--vllm-mem", type=float, default=0.85)
     ap.add_argument("--gen-batch", type=int, default=64, help="HF sampler batch size")
-    ap.add_argument("--micro-tokens", type=int, default=6144, help="padded tokens per backward micro batch")
+    ap.add_argument("--micro-tokens", type=int, default=4096, help="padded tokens per backward micro batch")
     ap.add_argument("--data-dir", default=str(ROOT / "data"))
     ap.add_argument("--runs-dir", default=str(ROOT / "runs"))
     ap.add_argument("--resume-from", default=None, help="a previous session's runs dir to continue from")
@@ -384,12 +423,17 @@ def main():
         model.train()
         live = [i for i in range(n_total) if adv[i] != 0.0 and len(rolls[i].tokens) > 0]
         optimizer.zero_grad(set_to_none=True)
+        lp_diff_sum, lp_diff_n = 0.0, 0
         for mb in micro_batches([(i, len(expanded[i]) + len(rolls[i].tokens)) for i in live], args.micro_tokens):
             pairs = [(expanded[i], rolls[i].tokens) for i in mb]
             with torch.autocast(device_type=learner_dev.type, dtype=compute_dtype, enabled=n_gpu > 0):
                 lps = response_logps(model, pairs, learner_dev)
             loss = 0.0
             for lp, i in zip(lps, mb):
+                if rolls[i].sampler_logps is not None:
+                    sl = torch.tensor(rolls[i].sampler_logps, device=learner_dev)
+                    lp_diff_sum += float((lp.detach().float() - sl).abs().sum())
+                    lp_diff_n += len(sl)
                 seq = sequence_losses(lp[None], lp.detach()[None], torch.ones_like(lp)[None],
                                       torch.tensor([adv[i]], device=learner_dev, dtype=torch.float32),
                                       variant.length_norm, args.max_tokens)
@@ -421,6 +465,8 @@ def main():
                "signal_groups": int(((groups > 0) & (groups < args.group)).sum()),
                "trained_seqs": len(live), "grad_norm": grad_norm, "clipped": clipped,
                "nonfinite_grad": nonfinite, "tokens": int(lens.sum()),
+               # sampler vs learner log prob gap on trained tokens: large means the weight sync is wrong
+               "sampler_learner_logp_absdiff": round(lp_diff_sum / lp_diff_n, 5) if lp_diff_n else None,
                "t_rollout": round(t_roll, 1), "t_train": round(t_train, 1),
                "peak_gb": round(torch.cuda.max_memory_allocated(learner_dev) / 2**30, 2) if n_gpu else 0.0}
         with open(out / "log.jsonl", "a") as f:
