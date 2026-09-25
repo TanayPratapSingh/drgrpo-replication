@@ -14,15 +14,26 @@ Qwen2.5-1.5B base, R1 template, MATH questions, binary answer tag reward.
 
 ## Current state (update this section at every checkpoint)
 
-- GRPO seed 0: running or paused near step 40 of 100. Checkpoint every 10 steps
-  counted from each resume point (next stops 45, 55, ... 95, then final at 100).
-- Dr. GRPO seed 0: not started. Runs automatically after GRPO finishes.
-- Mode: ASK=1. The runner stops at every checkpoint and between runs, and the
-  user is asked "Continue / Continue without asking / Stay paused" each time.
-  The user asked for this explicitly; keep asking unless told otherwise.
-- 27 commits on main, local only, no remote yet. Not pushed.
+- **Moved to Kaggle (2x T4) on 2026-09-25** because the laptop was too heavy for
+  the user. The Mac run (MLX, GRPO seed 0, 44 steps) is kept as a pilot only; it
+  cannot be paired with a CUDA arm.
+- Kaggle kernel `tanaypsingh/drgrpo-replication` version 8 is running the seed 0
+  pair: GRPO then Dr. GRPO, 100 steps each, one session (~6 to 7 h expected).
+- Backend: `src/train_torch.py`. vLLM 0.30 samples on GPU 0 with merged weights
+  synced in place every step; the learner trains LoRA on GPU 1 in fp16.
+  Verified: sampler vs learner mean abs log prob gap 0.002 to 0.004 nats.
+- Launch and monitor: `.kvenv/bin/python kaggle/launch.py full|status|logs|output`;
+  live log `.kvenv/bin/kaggle kernels logs -f tanaypsingh/drgrpo-replication`.
+  Stopping a running session needs the Kaggle web UI (no CLI cancel).
+- User wants a check in at every 10 step checkpoint; on Kaggle these are reports,
+  since the session cannot be paused from here.
+- Public repo: https://github.com/TanayPratapSingh/drgrpo-replication. Push each
+  milestone.
 
 ## How to operate
+
+Kaggle (current): see the state section above. The laptop commands below still
+work for the MLX pilot.
 
 ```bash
 ./resume.sh              # continue from the latest checkpoint, ask mode
@@ -75,9 +86,18 @@ one is already running.
 Held out MATH500 (100 problems, greedy): 2% at step 0, 38% at step 25.
 This is one arm. It is not a finding until Dr. GRPO on the same questions exists.
 
+## Kaggle lessons (each cost a smoke run)
+
+- Datasets mount at /kaggle/input/datasets/<user>/<slug>/, flattened; search recursively.
+- Kaggle ships torchao 0.10, which peft refuses; uninstall it in the kernel.
+- torch says bf16 is supported on a T4 (emulated); key bf16 on compute capability >= 8.
+- vLLM per request seeds sampled one request at a time: 350 tok/s. Without them: ~1000.
+- Build merged weights as a generator; materialising all of them OOMed the sampler GPU.
+- vLLM logprobs=0 returned nothing on 0.30; logprobs=1 works.
+
 ## What is left
 
-1. Finish GRPO s0 and Dr. GRPO s0 (~9 h of compute from step 40).
+1. Finish GRPO s0 and Dr. GRPO s0 on Kaggle (both arms on the same backend).
 2. `src/analyze.py`: paired per step length difference with bootstrap CIs,
    slopes, final eval incorrect length (claims C1 to C3 in its docstring).
    Extend it to regrade final_eval_responses.jsonl per problem.
