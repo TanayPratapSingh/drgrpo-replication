@@ -11,7 +11,7 @@ set -u
 cd "$(dirname "$0")"
 STEPS="${STEPS:-100}"
 SEEDS="${SEEDS:-0}"          # SEEDS="0 1 2" for the paper's three seed robustness check
-CKPT_EVERY="${CKPT_EVERY:-5}"
+CKPT_EVERY="${CKPT_EVERY:-10}"
 # ASK=1 stops after every checkpoint and after every finished run, for review.
 # ASK=0 ./resume.sh runs unattended.
 ASK="${ASK:-1}"
