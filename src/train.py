@@ -128,6 +128,11 @@ def main():
     # watchdog killed a command buffer mid rollout, so cap it and clear it
     # between the rollout and training phases.
     mx.set_cache_limit(1 * 2**30)
+    # Pin the GPU working set in RAM. Swap alone was survivable; what killed the
+    # run was macOS paging out Metal buffers mid command, so the GPU stalled
+    # past the watchdog. 9 GB covers the measured 7.6 GB peak and stays under
+    # the M5's 11.84 GB recommended working set.
+    mx.set_wired_limit(9 * 2**30)
 
     model, tok = load(args.model)
     model.freeze()
