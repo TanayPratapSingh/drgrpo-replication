@@ -1,0 +1,85 @@
+[
+  {
+    "seed": 0,
+    "steps_compared": 100,
+    "len_mean_grpo_last_third": 319.0968276515151,
+    "len_mean_drgrpo_last_third": 558.241240530303,
+    "paired_len_diff_all_steps": [
+      -99.334453125,
+      -123.396947265625,
+      -76.90771875
+    ],
+    "paired_len_diff_last_third": [
+      -239.14441287878788,
+      -261.5440400094697,
+      -216.63696141098487
+    ],
+    "slope_len_grpo_per_step": -0.19994646339633923,
+    "slope_len_drgrpo_per_step": 2.9659739255175523,
+    "reward_grpo_last_third": 0.4569128787878788,
+    "reward_drgrpo_last_third": 0.5229640151515151,
+    "paired_incorrect_len_diff_all_steps": [
+      -96.65198669211286,
+      -125.75652571026501,
+      -67.46524063633359
+    ],
+    "truncated_per_step_grpo": 8.22,
+    "truncated_per_step_drgrpo": 9.21,
+    "final_eval_paired": {
+      "n": 500,
+      "accuracy_grpo": 0.512,
+      "accuracy_drgrpo": 0.516,
+      "paired_accuracy_diff_drgrpo_minus_grpo": [
+        0.004,
+        -0.034,
+        0.04
+      ],
+      "len_incorrect_grpo": [
+        545.1065573770492,
+        504.2111680327869,
+        587.9632172131147
+      ],
+      "len_incorrect_drgrpo": [
+        680.4380165289256,
+        646.2181818181818,
+        714.9719008264462
+      ],
+      "len_correct_grpo": [
+        261.5234375,
+        242.92578125,
+        280.35185546875
+      ],
+      "len_correct_drgrpo": [
+        398.9031007751938,
+        380.82548449612403,
+        417.86850775193795
+      ],
+      "paired_len_diff_both_wrong_grpo_minus_drgrpo": [
+        -120.39698492462311,
+        -160.39711055276382,
+        -80.47562814070353
+      ],
+      "problems_both_wrong": 199,
+      "truncated_grpo": 55,
+      "truncated_drgrpo": 55
+    },
+    "final_eval": {
+      "grpo": {
+        "n": 500,
+        "accuracy": 0.512,
+        "len_mean": 399.912,
+        "len_correct": 261.5234375,
+        "len_incorrect": 545.1065573770492,
+        "truncated": 55
+      },
+      "drgrpo": {
+        "n": 500,
+        "accuracy": 0.516,
+        "len_mean": 535.166,
+        "len_correct": 398.9031007751938,
+        "len_incorrect": 680.4380165289256,
+        "truncated": 55
+      }
+    }
+  }
+]
