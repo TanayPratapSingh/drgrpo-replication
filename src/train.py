@@ -160,6 +160,19 @@ def main():
         return seq.sum() / n_total          # summed over sequences = mean over the rollout
 
     loss_and_grad = nn.value_and_grad(model, loss_fn)
+
+    # Gradient checkpointing for the backward passes only. A 1024 token response
+    # otherwise pushes peak memory past what 16 GB can hold; during rollouts the
+    # plain forward is restored so generation pays nothing for it.
+    Block = type(model.model.layers[0])
+    plain_call = Block.__call__
+
+    def checkpointed_call(self, *a, **k):
+        def inner(params, *a, **k):
+            self.update(params)
+            return plain_call(self, *a, **k)
+        return mx.checkpoint(inner)(self.trainable_parameters(), *a, **k)
+
     cursor = 0
 
     for step in range(1, args.steps + 1):
@@ -185,11 +198,13 @@ def main():
         t1 = time.time()
         acc = None
         live = [i for i in range(n_total) if adv[i] != 0.0]
+        Block.__call__ = checkpointed_call
         for i in live:
             full = expanded[i] + rolls[i].tokens
             _, g = loss_and_grad(model, full, len(expanded[i]), float(adv[i]), n_total)
             acc = g if acc is None else tree_map(lambda a, b: a + b, acc, g)
             mx.eval(acc)
+        Block.__call__ = plain_call
         grad_norm, clipped = 0.0, False
         if acc is not None:
             acc, gn = optim.clip_grad_norm(acc, max_norm=args.clip_grad)
