@@ -1,0 +1,28 @@
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 2489.41it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] eval step 0 n=20: acc 0.000 len 394 (correct None, incorrect 393.75)
+[grpo s0] step   1 reward 0.016 fmt 0.18 len 254 (c 84.5 / i 256.6111111111111) sig 2/16 gn 0.062 roll 76s train 10s peak 7.27GB
+[grpo s0] step   2 reward 0.016 fmt 0.17 len 293 (c 460.5 / i 290.5238095238095) sig 2/16 gn 0.088 roll 107s train 28s peak 11.33GB
+[grpo s0] step   3 reward 0.031 fmt 0.14 len 257 (c 145.0 / i 260.8306451612903) sig 3/16 gn 0.060 roll 133s train 15s peak 11.07GB
+Traceback (most recent call last):
+  File "/Users/tanay/Desktop/files/drgrpo-replication/src/train.py", line 250, in <module>
+    if step % args.eval_every == 0 and step != args.steps:
+^^^^^^
+  File "/Users/tanay/Desktop/files/drgrpo-replication/src/train.py", line 175, in main
+    
+    
+  File "/Users/tanay/Desktop/files/drgrpo-replication/src/rollout.py", line 72, in sample
+    responses = gen.next_generated()
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tanay/Desktop/files/drgrpo-replication/.venv/lib/python3.12/site-packages/mlx_lm/generate.py", line 1866, in next_generated
+    prompt_responses, generation_responses = self._next()
+                                             ^^^^^^^^^^^^
+  File "/Users/tanay/Desktop/files/drgrpo-replication/.venv/lib/python3.12/site-packages/mlx_lm/generate.py", line 1775, in _next
+    generation_responses = self._generation_batch.next()
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tanay/Desktop/files/drgrpo-replication/.venv/lib/python3.12/site-packages/mlx_lm/generate.py", line 1415, in next
+    tokens, logprobs = self._step()
+                       ^^^^^^^^^^^^
+  File "/Users/tanay/Desktop/files/drgrpo-replication/.venv/lib/python3.12/site-packages/mlx_lm/generate.py", line 1369, in _step
+    mx.async_eval(self._next_tokens, self._next_logprobs, token_context)
+RuntimeError: [METAL] Command buffer execution failed: Caused GPU Timeout Error (00000002:kIOGPUCommandBufferCallbackErrorTimeout).
