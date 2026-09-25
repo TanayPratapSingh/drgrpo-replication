@@ -18,34 +18,9 @@ The four variants below are the four arms of the paper's Appendix C ablation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import mlx.core as mx
-import numpy as np
 
-
-@dataclass(frozen=True)
-class Variant:
-    name: str
-    std_norm: bool  # divide the centred reward by the group std
-    length_norm: bool  # divide each response's summed loss by its own length
-
-
-VARIANTS = {
-    "grpo": Variant("grpo", std_norm=True, length_norm=True),
-    "drgrpo": Variant("drgrpo", std_norm=False, length_norm=False),
-    "grpo_no_len": Variant("grpo_no_len", std_norm=True, length_norm=False),
-    "grpo_no_std": Variant("grpo_no_std", std_norm=False, length_norm=True),
-}
-
-
-def group_advantages(rewards: np.ndarray, group_size: int, std_norm: bool) -> np.ndarray:
-    """One scalar advantage per response, shared by all of its tokens."""
-    r = np.asarray(rewards, dtype=np.float64).reshape(-1, group_size)
-    adv = r - r.mean(axis=1, keepdims=True)
-    if std_norm:
-        adv = adv / (r.std(axis=1, ddof=1, keepdims=True) + 1e-8)
-    return adv.reshape(-1)
+from variants import VARIANTS, Variant, group_advantages  # noqa: F401  (re-exported)
 
 
 def sequence_losses(
