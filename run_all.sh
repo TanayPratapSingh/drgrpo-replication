@@ -12,6 +12,10 @@ cd "$(dirname "$0")"
 STEPS="${STEPS:-100}"
 SEEDS="${SEEDS:-0}"          # SEEDS="0 1 2" for the paper's three seed robustness check
 CKPT_EVERY="${CKPT_EVERY:-5}"
+# ASK=1 stops after every checkpoint and after every finished run, for review.
+# ASK=0 ./resume.sh runs unattended.
+ASK="${ASK:-1}"
+EXTRA=""; [ "$ASK" = "1" ] && EXTRA="--pause-each-ckpt"
 # LoRA LR: 50x the paper's full fine tuning 1e-6. 2e-5 left the format rate flat
 # (0.18, 0.20, 0.17, 0.15) over the first four pilot steps, too slow for a 100
 # step laptop budget. Chosen on format learning speed alone; identical in both arms.
@@ -26,9 +30,10 @@ for seed in $SEEDS; do
     fi
     echo "$(date -u +%FT%TZ) start $name"
     caffeinate -i .venv/bin/python src/train.py --loss "$loss" --seed "$seed" \
-      --steps "$STEPS" --lr "$LR" --gen-batch 128 --resume --ckpt-every "$CKPT_EVERY" \
+      --steps "$STEPS" --lr "$LR" --gen-batch 128 --resume --ckpt-every "$CKPT_EVERY" $EXTRA \
       >> "logs/$name.log" 2>&1
     echo "$(date -u +%FT%TZ) end $name exit=$?"
+    if [ "$ASK" = "1" ] && [ -s "runs/$name/final_eval_responses.jsonl" ]; then touch PAUSE; fi
     if [ -e PAUSE ]; then echo "$(date -u +%FT%TZ) paused after $name"; exit 0; fi
   done
 done
