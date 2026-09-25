@@ -150,6 +150,8 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--resume", action="store_true", help="continue from the latest checkpoint")
     ap.add_argument("--ckpt-every", type=int, default=5)
+    ap.add_argument("--pause-each-ckpt", action="store_true",
+                    help="stop after every checkpoint and wait for ./resume.sh")
     args = ap.parse_args()
 
     variant = VARIANTS[args.loss]
@@ -330,8 +332,12 @@ def main():
                                 dict(tree_flatten(model.trainable_parameters())))
 
         pause = PAUSE_FILE.exists() and step != args.steps
-        if pause or step % args.ckpt_every == 0:
+        checkpoint_due = step % args.ckpt_every == 0
+        if pause or checkpoint_due:
             save_checkpoint(ckpt_root, step, model, optimizer)
+        if args.pause_each_ckpt and checkpoint_due and step != args.steps:
+            PAUSE_FILE.touch()        # also stops run_all.sh from launching anything else
+            pause = True
         if pause:
             print(f"[{args.loss} s{args.seed}] paused after step {step}; checkpoint saved", flush=True)
             return
