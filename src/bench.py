@@ -10,9 +10,10 @@ from vendor.math_grader import answer_tag_reward_fn
 
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "Qwen/Qwen2.5-0.5B"
 MAX_TOKENS = int(sys.argv[2]) if len(sys.argv) > 2 else 1024
+DATASET = sys.argv[3] if len(sys.argv) > 3 else "math_12k"
 
 model, tok = load(MODEL)
-data = Dataset.from_file("data/math_12k.arrow")
+data = Dataset.from_file(f"data/{DATASET}.arrow")
 rng = random.Random(0)
 qs = [data[i] for i in rng.sample(range(len(data)), 16)]
 prompts = [tok.encode(r1_prompt(q["problem"])) for q in qs for _ in range(8)]
@@ -29,7 +30,7 @@ lens = [len(o.tokens) for o in outs]
 fin = {k: sum(o.finish == k for o in outs) for k in ("answer", "eos", "length")}
 groups = [rewards[i:i + 8] for i in range(0, 128, 8)]
 mixed = sum(0 < sum(g) < 8 for g in groups)
-print(f"model {MODEL}  budget {MAX_TOKENS}")
+print(f"model {MODEL}  budget {MAX_TOKENS}  data {DATASET}")
 print(f"wall {dt:.1f}s  generated {sum(lens):,} tokens  -> {sum(lens)/dt:,.0f} tok/s aggregate")
 print(f"peak memory {mx.get_peak_memory()/2**30:.2f} GB")
 print(f"response length mean {statistics.mean(lens):.0f}  median {statistics.median(lens):.0f}  max {max(lens)}")
