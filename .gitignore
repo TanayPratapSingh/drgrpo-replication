@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+# downloaded by src/fetch_data.py
+data/*.arrow
+# runtime flag written by pause.sh and cleared by resume.sh
+PAUSE
+# 282 MB adapters and 845 MB checkpoints stay local
+runs/*/ckpt/
+runs/*/adapter.safetensors
