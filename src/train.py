@@ -118,6 +118,9 @@ def main():
     variant = VARIANTS[args.loss]
     out = ROOT / "runs" / (args.out or f"{args.loss}_s{args.seed}")
     out.mkdir(parents=True, exist_ok=True)
+    # A restarted run must not interleave its steps with a crashed run's lines.
+    for stale in ("log.jsonl", "eval.jsonl", "rollouts.jsonl"):
+        (out / stale).write_text("")
     (out / "config.json").write_text(json.dumps({
         **vars(args), "variant": variant.__dict__,
         "started": datetime.now(timezone.utc).isoformat(),
