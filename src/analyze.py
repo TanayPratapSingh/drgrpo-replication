@@ -19,6 +19,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 RUNS = ROOT / "runs"
 rng = np.random.default_rng(0)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
 def load(name):
@@ -73,7 +74,11 @@ def compare(seed):
     di = [s["len_incorrect"] for s in d["steps"][:n]]
     pairs = [(a, b) for a, b in zip(gi, di) if a is not None and b is not None]
     out["paired_incorrect_len_diff_all_steps"] = boot_ci([a - b for a, b in pairs])
+    out["truncated_per_step_grpo"] = float(np.mean([s["truncated"] for s in g["steps"][:n]]))
+    out["truncated_per_step_drgrpo"] = float(np.mean([s["truncated"] for s in d["steps"][:n]]))
     # final evaluation, paired by problem (same 500 problems, same order)
+    if g["final"] and d["final"] and len(g["final"]) == len(d["final"]):
+        out["final_eval_paired"] = final_eval_paired(g["final"], d["final"], len(g["final"]))
     if g["final"] and d["final"]:
         fe_g, fe_d = g["evals"][-1], d["evals"][-1]
         out["final_eval"] = {
@@ -83,8 +88,44 @@ def compare(seed):
     return out
 
 
+def final_eval_paired(g_final, d_final, n):
+    """Regrade both arms' final eval responses problem by problem.
+
+    Both arms answered the same MATH500 problems in the same order (eval subset is
+    a fixed permutation, seed 1234), so each problem is a matched pair.
+    """
+    from datasets import Dataset
+    from vendor.math_grader import answer_tag_reward_fn
+    evald = Dataset.from_file(str(ROOT / "data" / "eval_math500.arrow"))
+    idx = np.random.default_rng(1234).permutation(len(evald))[:n]
+    answers = [evald[int(i)]["answer"] for i in idx]
+
+    def score(final):
+        ok = np.array([answer_tag_reward_fn(r["text"], a, fast=True)[1] > 0 for r, a in zip(final, answers)])
+        ln = np.array([r["len"] for r in final], float)
+        tr = np.array([r["finish"] == "length" for r in final])
+        return ok, ln, tr
+
+    go, gl, gt = score(g_final)
+    do, dl, dt = score(d_final)
+    both_wrong = ~go & ~do
+    return {
+        "n": int(n),
+        "accuracy_grpo": float(go.mean()), "accuracy_drgrpo": float(do.mean()),
+        "paired_accuracy_diff_drgrpo_minus_grpo": boot_ci(do.astype(float) - go.astype(float)),
+        "len_incorrect_grpo": boot_ci(gl[~go]), "len_incorrect_drgrpo": boot_ci(dl[~do]),
+        "len_correct_grpo": boot_ci(gl[go]), "len_correct_drgrpo": boot_ci(dl[do]),
+        "paired_len_diff_both_wrong_grpo_minus_drgrpo": boot_ci(gl[both_wrong] - dl[both_wrong]),
+        "problems_both_wrong": int(both_wrong.sum()),
+        "truncated_grpo": int(gt.sum()), "truncated_drgrpo": int(dt.sum()),
+    }
+
+
 if __name__ == "__main__":
-    seeds = [int(s) for s in sys.argv[1:]] or [0, 1, 2]
+    args = sys.argv[1:]
+    if args and args[0] == "--runs-dir":
+        RUNS = Path(args[1]); args = args[2:]
+    seeds = [int(s) for s in args] or [0, 1, 2]
     results = [r for r in (compare(s) for s in seeds) if r]
     print(json.dumps(results, indent=2))
     (RUNS / "analysis.json").write_text(json.dumps(results, indent=2))
