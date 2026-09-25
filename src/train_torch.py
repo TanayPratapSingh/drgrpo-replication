@@ -127,17 +127,21 @@ class VLLMSampler:
     def generate(self, prompt_ids, n, temperature, seed):
         from vllm import SamplingParams
         sp = SamplingParams(n=n, temperature=temperature, top_p=1.0, max_tokens=self.args.max_tokens,
-                            stop=[STOP_STR], include_stop_str_in_output=True, logprobs=0,
-                            seed=seed if temperature > 0 else None)
+                            stop=[STOP_STR], include_stop_str_in_output=True, logprobs=1)
+        # No per request seed: vLLM samples seeded requests one by one, which held a T4
+        # to ~350 tok/s. The engine is seeded once at startup instead, so both arms still
+        # draw identical first rollouts; exact reproducibility past step 1 was already
+        # lost to non deterministic GPU backward passes.
         outs = self.llm.generate([{"prompt_token_ids": p} for p in prompt_ids], sp, use_tqdm=False)
         rolls = []
         for o in outs:
             for c in o.outputs:
                 finish = ("length" if c.finish_reason == "length"
                           else "answer" if c.stop_reason == STOP_STR else "eos")
+                # logprobs=0 came back empty on vLLM 0.30; with 1 the sampled token is always included
                 lps = None
-                if c.logprobs:
-                    lps = [float(d[t].logprob) for d, t in zip(c.logprobs, c.token_ids)]
+                if c.logprobs is not None and len(c.logprobs) == len(c.token_ids):
+                    lps = [float(pos[t].logprob) for pos, t in zip(c.logprobs, c.token_ids)]
                 rolls.append(Rollout(list(c.token_ids), c.text, finish, lps))
         return rolls
 
