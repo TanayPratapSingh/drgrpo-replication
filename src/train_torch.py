@@ -263,7 +263,9 @@ def main():
     n_gpu = torch.cuda.device_count()
     learner_dev = torch.device(f"cuda:{1 if n_gpu > 1 else 0}") if n_gpu else torch.device("cpu")
     sampler_dev = torch.device("cuda:0") if n_gpu else torch.device("cpu")
-    bf16 = n_gpu and torch.cuda.is_bf16_supported()
+    # native bf16 needs compute capability 8.0 (Ampere). torch reports bf16 as supported on
+    # a T4 (7.5) by emulating it, which is slow, and vLLM refuses bf16 there outright.
+    bf16 = bool(n_gpu) and torch.cuda.get_device_capability(0)[0] >= 8
     compute_dtype = torch.bfloat16 if bf16 else (torch.float16 if n_gpu else torch.float32)
     use_scaler = compute_dtype == torch.float16
 
