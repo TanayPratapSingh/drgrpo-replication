@@ -11,3 +11,5 @@ runs/*/ckpt/
 runs/*/adapter.safetensors
 .kvenv/
 .tvenv/
+kaggle/build/
+kaggle/output/
