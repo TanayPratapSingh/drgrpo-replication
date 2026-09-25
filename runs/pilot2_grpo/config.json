@@ -1,0 +1,24 @@
+{
+  "loss": "grpo",
+  "seed": 0,
+  "steps": 6,
+  "model": "Qwen/Qwen2.5-1.5B",
+  "prompts": 16,
+  "group": 8,
+  "max_tokens": 1024,
+  "lr": 2e-05,
+  "lora_rank": 64,
+  "lora_scale": 1.0,
+  "clip_grad": 1.0,
+  "gen_batch": 64,
+  "eval_every": 100,
+  "eval_n": 20,
+  "final_eval_n": 20,
+  "out": "pilot2_grpo",
+  "variant": {
+    "name": "grpo",
+    "std_norm": true,
+    "length_norm": true
+  },
+  "started": "2026-09-24T22:56:30.807127+00:00"
+}

@@ -1,0 +1,1 @@
+{"step": 1, "reward": 0.0078125, "format_rate": 0.0859375, "len_mean": 263.5390625, "len_median": 181.0, "len_correct": 68.0, "len_incorrect": 265.0787401574803, "truncated": 2, "signal_groups": 1, "trained_seqs": 8, "grad_norm": 0.04666772112250328, "clipped": false, "tokens": 33733, "t_rollout": 222.2, "t_train": 5.0, "peak_gb": 10.26}

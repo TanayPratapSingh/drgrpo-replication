@@ -1,0 +1,4 @@
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 2426.26it/s]
+[grpo s0] trainable LoRA params: 73,859,072
+[grpo s0] eval step 0 n=20: acc 0.000 len 394 (correct None, incorrect 393.75)
+[grpo s0] step   1 reward 0.008 fmt 0.09 len 264 (c 68.0 / i 265.0787401574803) sig 1/16 gn 0.047 roll 222s train 5s peak 10.26GB
