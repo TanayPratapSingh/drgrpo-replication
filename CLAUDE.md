@@ -14,21 +14,13 @@ Qwen2.5-1.5B base, R1 template, MATH questions, binary answer tag reward.
 
 ## Current state (update this section at every checkpoint)
 
-- **Moved to Kaggle (2x T4) on 2026-09-25** because the laptop was too heavy for
-  the user. The Mac run (MLX, GRPO seed 0, 44 steps) is kept as a pilot only; it
-  cannot be paired with a CUDA arm.
-- Kaggle kernel `tanaypsingh/drgrpo-replication` version 8 is running the seed 0
-  pair: GRPO then Dr. GRPO, 100 steps each, one session (~6 to 7 h expected).
-- Backend: `src/train_torch.py`. vLLM 0.30 samples on GPU 0 with merged weights
-  synced in place every step; the learner trains LoRA on GPU 1 in fp16.
-  Verified: sampler vs learner mean abs log prob gap 0.002 to 0.004 nats.
-- Launch and monitor: `.kvenv/bin/python kaggle/launch.py full|status|logs|output`;
-  live log `.kvenv/bin/kaggle kernels logs -f tanaypsingh/drgrpo-replication`.
-  Stopping a running session needs the Kaggle web UI (no CLI cancel).
-- User wants a check in at every 10 step checkpoint; on Kaggle these are reports,
-  since the session cannot be paused from here.
-- Public repo: https://github.com/TanayPratapSingh/drgrpo-replication. Push each
-  milestone.
+- **Seed 0 is complete on Kaggle (4.35 GPU h) and written up.** GRPO 51.2% vs
+  Dr. GRPO 51.6% on MATH500; Dr. GRPO produced LONGER responses (paired +99
+  tokens/step, +239 last third; wrong answers 680 vs 545). Accuracy claim holds,
+  both length claims reversed. README, figures and runs/kaggle/ hold everything.
+- The user declined seeds 1 and 2 ("too much"). Do not relaunch without asking.
+- Possible next steps, only on request: portfolio entry, walkthrough video.
+- Public repo: https://github.com/TanayPratapSingh/drgrpo-replication.
 
 ## How to operate
 
