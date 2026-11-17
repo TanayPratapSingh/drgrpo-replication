@@ -128,8 +128,10 @@ python3 -m venv .tvenv && .tvenv/bin/pip install torch transformers peft dataset
 .tvenv/bin/python src/fetch_data.py
 .tvenv/bin/python src/train_torch.py --loss grpo   --seed 0 --steps 100 --runs-dir runs/local
 .tvenv/bin/python src/train_torch.py --loss drgrpo --seed 0 --steps 100 --runs-dir runs/local
-.tvenv/bin/python src/analyze.py --runs-dir runs/local 0 && .tvenv/bin/python src/plots.py
+.tvenv/bin/python src/analyze.py --runs-dir runs/local 0
 ```
+
+`src/plots.py` draws the figures from the committed `runs/kaggle` runs.
 
 On Kaggle: `python kaggle/launch.py full --seeds 0` (uses your own Kaggle CLI
 login). Seeds 1 and 2 are one argument away and cost about 4.4 GPU hours each.
