@@ -120,12 +120,15 @@ found along the way, each with its commit:
 
 ## Running it
 
+To train both arms yourself. Your runs go to `runs/local`, so the committed
+runs under `runs/` are never overwritten:
+
 ```bash
 python3 -m venv .tvenv && .tvenv/bin/pip install torch transformers peft datasets vllm
 .tvenv/bin/python src/fetch_data.py
-.tvenv/bin/python src/train_torch.py --loss grpo   --seed 0 --steps 100
-.tvenv/bin/python src/train_torch.py --loss drgrpo --seed 0 --steps 100
-.tvenv/bin/python src/analyze.py 0 && .tvenv/bin/python src/plots.py
+.tvenv/bin/python src/train_torch.py --loss grpo   --seed 0 --steps 100 --runs-dir runs/local
+.tvenv/bin/python src/train_torch.py --loss drgrpo --seed 0 --steps 100 --runs-dir runs/local
+.tvenv/bin/python src/analyze.py --runs-dir runs/local 0 && .tvenv/bin/python src/plots.py
 ```
 
 On Kaggle: `python kaggle/launch.py full --seeds 0` (uses your own Kaggle CLI

@@ -14,3 +14,5 @@ runs/*/adapter.safetensors
 kaggle/build/
 kaggle/output/
 kaggle/output_seed0/
+# your own reproduction runs (README, Running it)
+runs/local/
