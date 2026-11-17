@@ -16,3 +16,4 @@ kaggle/output/
 kaggle/output_seed0/
 # your own reproduction runs (README, Running it)
 runs/local/
+runs/kaggle/analysis.json

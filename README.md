@@ -120,6 +120,16 @@ found along the way, each with its commit:
 
 ## Running it
 
+To check the published numbers from the committed seed 0 runs, with no GPU.
+It regrades both arms' MATH500 answers and should print what
+`runs/kaggle/analysis_seed0.json` holds:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install numpy datasets 'math-verify[antlr4_13_2]' latex2sympy2_extended pylatexenc
+.venv/bin/python src/fetch_data.py
+.venv/bin/python src/analyze.py --runs-dir runs/kaggle 0
+```
+
 To train both arms yourself. Your runs go to `runs/local`, so the committed
 runs under `runs/` are never overwritten:
 
